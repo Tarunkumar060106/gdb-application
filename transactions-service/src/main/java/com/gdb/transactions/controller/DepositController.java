@@ -40,7 +40,7 @@ public class DepositController {
             @ApiResponse(responseCode = "422", description = "Validation error"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<TransactionResponse> processDeposit(@RequestBody DepositRequest request) {
+    public ResponseEntity<TransactionResponse> processDeposit(@Valid @RequestBody DepositRequest request) {
         SecurityUtils.checkStaffRole();
         log.info("Received deposit request for account: {}", request.getAccountNumber());
 
