@@ -1,0 +1,248 @@
+version: "3.9"
+
+# ── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  gdb-network:
+    driver: bridge
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  auth-db-data:
+  users-db-data:
+  accounts-db-data:
+  transactions-db-data:
+
+# ── Services ──────────────────────────────────────────────────────────────────
+services:
+
+  # ── Databases ──────────────────────────────────────────────────────────────
+  auth-db:
+    image: postgres:15-alpine
+    container_name: gdb-auth-db
+    environment:
+      POSTGRES_DB: gdb_auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    networks:
+      - gdb-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gdb_auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  users-db:
+    image: postgres:15-alpine
+    container_name: gdb-users-db
+    environment:
+      POSTGRES_DB: gdb_users_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - users-db-data:/var/lib/postgresql/data
+    networks:
+      - gdb-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gdb_users_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  accounts-db:
+    image: postgres:15-alpine
+    container_name: gdb-accounts-db
+    environment:
+      POSTGRES_DB: gdb_accounts_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - accounts-db-data:/var/lib/postgresql/data
+    networks:
+      - gdb-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gdb_accounts_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  transactions-db:
+    image: postgres:15-alpine
+    container_name: gdb-transactions-db
+    environment:
+      POSTGRES_DB: gdb_transactions_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - transactions-db-data:/var/lib/postgresql/data
+    networks:
+      - gdb-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gdb_transactions_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: gdb-eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - gdb-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    container_name: gdb-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8004
+      USERS_SERVICE_URL: http://users-service:8003
+      ACCOUNT_SERVICE_URL: http://account-service:8001
+      TRANSACTIONS_SERVICE_URL: http://transactions-service:8002
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - gdb-network
+
+  # ── Business Services ──────────────────────────────────────────────────────
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: gdb-auth-service
+    ports:
+      - "8004:8004"
+    environment:
+      DATABASE_URL: jdbc:postgresql://auth-db:5432/gdb_auth_db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: root
+      USERS_SERVICE_URL: http://users-service:8003
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - gdb-network
+
+  users-service:
+    build:
+      context: ./users-service
+      dockerfile: Dockerfile
+    container_name: gdb-users-service
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: jdbc:postgresql://users-db:5432/gdb_users_db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: root
+    depends_on:
+      users-db:
+        condition: service_healthy
+    networks:
+      - gdb-network
+
+  aadhar-service:
+    build:
+      context: ./aadhar-service
+      dockerfile: Dockerfile
+    container_name: gdb-aadhar-service
+    ports:
+      - "8005:8005"
+    networks:
+      - gdb-network
+
+  company-service:
+    build:
+      context: ./company-service
+      dockerfile: Dockerfile
+    container_name: gdb-company-service
+    ports:
+      - "8006:8006"
+    networks:
+      - gdb-network
+
+  payment-gateway-service:
+    build:
+      context: ./payment-gateway-service
+      dockerfile: Dockerfile
+    container_name: gdb-payment-gateway
+    ports:
+      - "8009:8009"
+    networks:
+      - gdb-network
+
+  account-service:
+    build:
+      context: ./account-service
+      dockerfile: Dockerfile
+    container_name: gdb-account-service
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: jdbc:postgresql://accounts-db:5432/gdb_accounts_db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: root
+      AADHAR_SERVICE_URL: http://aadhar-service:8005
+      COMPANY_SERVICE_URL: http://company-service:8006
+      AUTH_SERVICE_URL: http://auth-service:8004
+    depends_on:
+      accounts-db:
+        condition: service_healthy
+      aadhar-service:
+        condition: service_started
+      company-service:
+        condition: service_started
+      auth-service:
+        condition: service_started
+    networks:
+      - gdb-network
+
+  transactions-service:
+    build:
+      context: ./transactions-service
+      dockerfile: Dockerfile
+    container_name: gdb-transactions-service
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: jdbc:postgresql://transactions-db:5432/gdb_transactions_db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: root
+      ACCOUNT_SERVICE_URL: http://account-service:8001
+      PAYMENT_GATEWAY_SERVICE_URL: http://payment-gateway-service:8009
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      transactions-db:
+        condition: service_healthy
+      account-service:
+        condition: service_started
+    networks:
+      - gdb-network
+
+  # ── Frontend ───────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gdb-frontend
+    ports:
+      - "80:80"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    depends_on:
+      - gateway-service
+    networks:
+      - gdb-network

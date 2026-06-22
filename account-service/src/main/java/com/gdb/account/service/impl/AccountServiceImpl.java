@@ -138,15 +138,6 @@
             return AccountMapper.toResponse(account);
         }
 
-        // TODO: MOD7-CR-01: Enable Caching.
-        // Trainee task: Configure cache management by adding @EnableCaching to the main application
-        // or a configuration class.
-        //
-        // TODO: MOD7-BUG-01: Stale data cache desync.
-        // Trainee task: Notice that after you deposit or withdraw funds, the dashboard balance
-        // does not update immediately. The read query is cached but balance updates (debit/credit)
-        // do not evict or refresh the cache. Add the missing eviction annotation (@CacheEvict or @CachePut)
-        // to the write/modification methods.
         @Override
         @org.springframework.cache.annotation.Cacheable(value = "accounts", key = "#accountNumber")
         public AccountResponse getAccountByNumber(Long accountNumber) {
@@ -166,6 +157,7 @@
 
         @Override
         @Transactional
+        @org.springframework.cache.annotation.CacheEvict(value = "accounts", key = "#request.accountNumber")
         public AccountOperationResponse debitAccount(AccountOperationRequest request) {
             log.info("Processing debit for account: {}, amount: {}", request.getAccountNumber(), request.getAmount());
 
@@ -212,6 +204,7 @@
 
         @Override
         @Transactional
+        @org.springframework.cache.annotation.CacheEvict(value = "accounts", key = "#request.accountNumber")
         public AccountOperationResponse creditAccount(AccountOperationRequest request) {
             log.info("Processing credit for account: {}, amount: {}", request.getAccountNumber(), request.getAmount());
 
