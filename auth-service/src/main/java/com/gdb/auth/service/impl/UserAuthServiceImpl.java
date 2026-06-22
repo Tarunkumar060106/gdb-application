@@ -29,6 +29,7 @@ public class UserAuthServiceImpl implements AuthService {
     private final TokenRepository tokenRepository;
     private final AuditRepository auditRepository;
     private final JwtUtil jwtUtil;
+    private final com.gdb.auth.service.TokenBlacklistService tokenBlacklistService;
 
     @Override
     public AuthTokenResponse login(LoginRequest request, String ipAddress, String userAgent) {
@@ -130,6 +131,7 @@ public class UserAuthServiceImpl implements AuthService {
     public void logout(String token) {
         try {
             String jti = jwtUtil.extractJti(token);
+            tokenBlacklistService.revoke(jti);
             tokenRepository.revokeByJti(jti);
             log.info("Token revoked for logout: {}", jti);
         } catch (Exception e) {
@@ -141,6 +143,11 @@ public class UserAuthServiceImpl implements AuthService {
     public TokenValidationResponse validateToken(String token) {
         boolean isValid = jwtUtil.validateToken(token);
         if (!isValid) {
+            return TokenValidationResponse.builder().isValid(false).build();
+        }
+
+        String jti = jwtUtil.extractJti(token);
+        if (tokenBlacklistService.isRevoked(jti)) {
             return TokenValidationResponse.builder().isValid(false).build();
         }
 

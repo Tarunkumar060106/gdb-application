@@ -43,13 +43,16 @@ public class SecurityFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             AuthClient.TokenValidationResponse validationResponse = authClient.validateToken(token);
-            
-            // TODO: MOD8-CR-01: Token revocation validation blacklist check.
-            // Trainee task: Implement a check inside this validation block.
-            // Call the auth service via a new endpoint (e.g., AuthClient.isTokenRevoked(token) or validationResponse.isRevoked())
-            // and if the token is revoked, deny authorization (HttpServletResponse.SC_UNAUTHORIZED).
 
-            if (validationResponse.isValid()) {
+            // MOD8-CR-01: Auth-service now checks the blacklist inside validateToken.
+            // A revoked (logged-out) token returns isValid=false, which is caught below.
+            if (validationResponse != null && authClient.isTokenRevoked(token)) {
+                log.warn("Revoked token rejected for path: {}", path);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has been revoked");
+                return;
+            }
+
+            if (validationResponse != null && validationResponse.isValid()) {
                 UserContext context = UserContext.builder()
                         .userId(validationResponse.getUserId())
                         .loginId(validationResponse.getLoginId())

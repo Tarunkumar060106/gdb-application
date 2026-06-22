@@ -46,4 +46,16 @@ public class AuthClient {
             return TokenValidationResponse.builder().isValid(false).build();
         }
     }
+
+    public boolean isTokenRevoked(String token) {
+        String url = authServiceUrl + "/internal/v1/auth/is-revoked";
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Boolean> result = restTemplate.postForObject(url, Map.of("token", token), Map.class);
+            return result != null && Boolean.TRUE.equals(result.get("revoked"));
+        } catch (Exception e) {
+            log.warn("Could not check token revocation: {}", e.getMessage());
+            return false;
+        }
+    }
 }

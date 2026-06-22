@@ -11,18 +11,13 @@ public class SecurityUtils {
         }
     }
 
-    // TODO: MOD8-BUG-01: Mismatched operator denies access.
-    // Trainee task: Notice that Admins and Tellers are blocked from accessing user profiles.
-    // Examine why checkAdminOrTellerRole is throwing ACCESS_DENIED for all valid users.
-    // Hint: Look closely at the logical check operator.
     public static void checkAdminOrTellerRole() {
         UserContext context = UserContextHolder.getContext();
         if (context == null)
             throw new RuntimeException("ACCESS_DENIED");
 
         String role = context.getRole();
-        // Injected Bug: Using OR (||) instead of AND (&&) in negative checks
-        if (!UserConstants.ROLE_ADMIN.equals(role) || !UserConstants.ROLE_TELLER.equals(role)) {
+        if (!UserConstants.ROLE_ADMIN.equals(role) && !UserConstants.ROLE_TELLER.equals(role)) {
             throw new RuntimeException("ACCESS_DENIED");
         }
     }

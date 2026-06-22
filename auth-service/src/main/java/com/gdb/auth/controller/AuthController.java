@@ -5,6 +5,8 @@ import com.gdb.auth.dto.request.RefreshTokenRequest;
 import com.gdb.auth.dto.response.AuthTokenResponse;
 import com.gdb.auth.dto.response.TokenValidationResponse;
 import com.gdb.auth.service.AuthService;
+import com.gdb.auth.service.TokenBlacklistService;
+import com.gdb.auth.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,8 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final TokenBlacklistService tokenBlacklistService;
+    private final JwtUtil jwtUtil;
 
     @PostMapping("/api/v1/auth/login")
     public ResponseEntity<AuthTokenResponse> login(
@@ -64,5 +68,17 @@ public class AuthController {
     public ResponseEntity<TokenValidationResponse> validateToken(@RequestBody Map<String, String> body) {
         String token = body.get("token");
         return ResponseEntity.ok(authService.validateToken(token));
+    }
+
+    @PostMapping("/internal/v1/auth/is-revoked")
+    public ResponseEntity<Map<String, Boolean>> isRevoked(@RequestBody Map<String, String> body) {
+        String token = body.get("token");
+        try {
+            String jti = jwtUtil.extractJti(token);
+            boolean revoked = tokenBlacklistService.isRevoked(jti);
+            return ResponseEntity.ok(Map.of("revoked", revoked));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("revoked", false));
+        }
     }
 }
