@@ -49,13 +49,23 @@ external:
   notification-service:
     url: ${NOTIFICATION_SERVICE_URL:http://localhost:8007}
   auth-service:
-    # TODO: MOD12-CR-01: Eureka Service Registry setup.
-    # Trainee task: Configure all microservices as Eureka discovery clients.
-    # 
-    # TODO: MOD12-BUG-01: Load-balanced lookup name mismatch.
-    # Trainee task: Under service discovery mode, calls to auth-service fail with service resolution errors.
-    # Injected Bug: The lookup URL references "http://AUTH-SERVICES" (plural) instead of "http://auth-service" (singular).
-    url: ${AUTH_SERVICE_URL:http://AUTH-SERVICES}
+    url: ${AUTH_SERVICE_URL:http://localhost:8004}
+
+# app.services key used by AuthClient @Value binding
+app:
+  services:
+    auth-url: ${AUTH_SERVICE_URL:http://localhost:8004}
+
+# Resilience4j Retry Configuration
+resilience4j:
+  retry:
+    instances:
+      aadharClient:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
 
 # Swagger/OpenAPI Configuration
 springdoc:
