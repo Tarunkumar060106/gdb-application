@@ -9,12 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Controller for retrieving security alerts.
- * 
- * TODO: MOD4-BUG-01: Mapped Property Sort crash (PropertyReferenceException).
- * Trainee task: Notice that when you sort by date, the endpoint returns a 500 error:
- * "No property 'alert_date' found for type 'SecurityAlertLog'".
- * Identify why it is failing and fix the sorting field name in the PageRequest.
+ * Controller for retrieving security alerts with pagination and sorting.
  */
 @RestController
 @RequestMapping("/api/v1/users/security-alerts")
@@ -27,9 +22,8 @@ public class SecurityAlertController {
     public Page<SecurityAlertLog> getAlerts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "alert_date") String sortBy) {
+            @RequestParam(defaultValue = "alertDate") String sortBy) {
 
-        // Injected Bug MOD4-BUG-01: Sorting by database column "alert_date" instead of entity property "alertDate"
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
         return alertRepository.findAll(pageRequest);
     }
