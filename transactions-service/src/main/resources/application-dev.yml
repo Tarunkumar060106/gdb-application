@@ -1,0 +1,17 @@
+server:
+  port: 8002
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gdb_transactions_db
+    username: postgres
+    password: root
+
+logging:
+  level:
+    root: DEBUG
+    com.gdb.transactions: DEBUG
+
+banking:
+  limits:
+    daily-max-limit: 50000.00

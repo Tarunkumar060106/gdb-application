@@ -67,7 +67,7 @@ transfer:
 # MOD5-BUG-01: Banking limits mapping target property
 banking:
   limits:
-    daily-max: 50000.00
+    daily-max-limit: 50000.00
 
 # Swagger/OpenAPI Configuration
 springdoc:
